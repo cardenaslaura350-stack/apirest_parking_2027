@@ -16,7 +16,7 @@ public class EspacioParqueo {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id_espacio;
 	@Column(nullable = false, unique = true)
-	private Integer nomero;
+	private Integer numero;
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private TipoVehiculo tipo;
