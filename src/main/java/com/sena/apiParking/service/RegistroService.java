@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.sena.apiParking.config.ZonaHoraria;
 import com.sena.apiParking.dto.CobroDetalle;
 import com.sena.apiParking.dto.EntradaRequet;
 import com.sena.apiParking.dto.RegistroResponse;
