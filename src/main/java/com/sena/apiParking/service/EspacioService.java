@@ -1,11 +1,18 @@
 package com.sena.apiParking.service;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.sena.apiParking.dto.EspacioLoteRequest;
 import com.sena.apiParking.dto.EspacioRequest;
 import com.sena.apiParking.dto.EspacioResponse;
 import com.sena.apiParking.model.EspacioParqueo;
+import com.sena.apiParking.model.EstadoEspacio;
+import com.sena.apiParking.model.TipoVehiculo;
 import com.sena.apiParking.repository.EspacioParqueoRepository;
 import com.sena.apiParking.repository.RegistroParqueoRepository;
 import com.sena.apiParking.exception.ApiException;
@@ -28,6 +35,67 @@ public class EspacioService {
 		}
 		EspacioParqueo e = EspacioParqueo.builder().numero(req.numero()).tipo(req.tipo()).build();
 		return EspacioResponse.de(espacioRepo.save(e));
+	}
+
+	@Transactional
+	public List<EspacioResponse> crearLote(EspacioLoteRequest req) {
+		if (req.desde() > req.hasta()) {
+			throw ApiException.badRequest("'desde' no puede ser mayor que 'hasta'");
+		}
+		if (req.hasta() - req.desde() + 1 > MAX_LOTE) {
+			throw ApiException.badRequest("Maximo"+MAX_LOTE+"espacios por lote");
+		}
+		List<EspacioParqueo> nuevos = new ArrayList<>();
+		for (int n = req.desde(); n <= req.hasta(); n++) {
+			if (espacioRepo.existsByNumero(n)) {
+				throw ApiException.conflict("Ya exite el espacio numero"+ n + "; no se creo ninguno");
+			}
+			nuevos.add(EspacioParqueo.builder().numero(n).tipo(req.tipo()).build());
+		}
+		return espacioRepo.saveAll(nuevos).stream().map(EspacioResponse::de).toList();
+	}
+	
+	@Transactional(readOnly = true)
+	public List<EspacioResponse> listar(TipoVehiculo tipo, EstadoEspacio estado){
+		return espacioRepo.findAll(Sort.by(EspacioParqueo::getNumero)).stream()
+				.filter(e -> tipo == null || e.getTipo() == tipo)
+				.filter(e -> estado == null || e.getEstado() == estado)
+				.map(EspacioResponse::de).toList();
+	}
+	
+	@Transactional(readOnly = true)
+	public EspacioResponse obtener(Long id) {
+		return EspacioResponse.de(buscar(id));
+	}
+	
+	@Transactional
+	public EspacioResponse actualizar(Long id, EspacioRequest req) {
+		EspacioParqueo e = buscar(id);
+		if (e.getEstado() == EstadoEspacio.OCUPADO) {
+			throw ApiException.conflict("No se puede modificar un espacio ocupado");
+		}
+		if (!e.getNumero().equals(req.numero()) && espacioRepo.existsByNumero(req.numero())) {
+			throw ApiException.conflict("ya esxite el espacio numero" +req.numero());
+		}
+		e.setNumero(req.numero());
+		e.setTipo(req.tipo());
+		return EspacioResponse.de(e);
+	}
+	
+	@Transactional
+	public void eliminar (Long id) {
+		EspacioParqueo e = buscar(id);
+		if (e.getEstado() == EstadoEspacio.OCUPADO) {
+			throw ApiException.conflict("No se puede modificar un espacio ocupado");
+		}
+		if (registroRepo.existsByEspacio(e)) {
+			throw ApiException.conflict("El espacio tiene historial de registros y no se puede eliminarse");
+		}
+		espacioRepo.delete(e);
+	}
+	
+	private EspacioParqueo buscar(Long id) {
+		return espacioRepo.findById(id).orElseThrow(() -> ApiException.notFound("Espacio"+id+"no encontrado"));
 	}
 
 }

@@ -13,4 +13,9 @@ public record RegistroResponse(Long idRegistro, String placa, TipoVehiculo tipoV
 				r.getEspacio().getNumero(), r.getFechaEntrada(), r.getFechaSalida(), r.getValorPagado(), cobre);
 	}
 
+	public static RegistroResponse de(RegistroParqueo registro, Object object) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }
